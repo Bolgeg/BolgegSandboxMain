@@ -23,6 +23,10 @@ class TimeCounter
 	}
 };
 
+class Emulator;
+
+Emulator*CURRENT_EMULATOR_FOR_AUDIO=nullptr;
+
 class Emulator
 {
 	public:
@@ -32,6 +36,8 @@ class Emulator
 	uint32_t memorySizeMask=0xfffffff;
 	uint32_t videoMemoryAddress=0xff00000;
 	uint32_t audioMemoryAddress=0xfe00000;
+	size_t audioSampleRate=48000;
+	size_t audioMemoryNumberOfSamples=48000*5;
 	
 	uint8_t stackRegisterIndex=127;
 	uint8_t numberOfNonVolatileRegisters=64;
@@ -44,6 +50,8 @@ class Emulator
 	Binary memory;
 	
 	TimeCounter emulationTimeCounter;
+	TimeCounter audioTimeCounter;
+	size_t nextAudioSample=0;
 	
 	Emulator()
 	{
@@ -54,6 +62,23 @@ class Emulator
 	void start()
 	{
 		emulationTimeCounter.start();
+		CURRENT_EMULATOR_FOR_AUDIO=this;
+		audioTimeCounter.start();
+	}
+	float getNextAudioSample()
+	{
+		uint32_t audioSampleAddress=audioMemoryAddress+nextAudioSample*4;
+		
+		uint32_t audioSample=
+			((uint32_t)memory.content[audioSampleAddress])
+			|(((uint32_t)memory.content[audioSampleAddress+1])<<8)
+			|(((uint32_t)memory.content[audioSampleAddress+2])<<16)
+			|(((uint32_t)memory.content[audioSampleAddress+3])<<24);
+		
+		nextAudioSample++;
+		nextAudioSample%=audioMemoryNumberOfSamples;
+		
+		return float(double((int32_t)audioSample)/0x80000000L);
 	}
 	void loadProgramFromFile(const string& filePath)
 	{
@@ -179,8 +204,8 @@ class Emulator
 						{
 							if(opcode&0x04)
 							{
-								value=0;//rdauds
-								//--------
+								double time=audioTimeCounter.end();
+								value=uint32_t(uint64_t(time*audioSampleRate)%audioMemoryNumberOfSamples);
 							}
 							else
 							{
@@ -411,6 +436,32 @@ class Emulator
 	}
 };
 
+void audioCallbackFunction(float*out,int samples)
+{
+	if(CURRENT_EMULATOR_FOR_AUDIO==nullptr)
+	{
+		for(int s=0;s<samples;s++)
+		{
+			*out=0;
+			out++;
+			*out=0;
+			out++;
+		}
+	}
+	else
+	{
+		for(int s=0;s<samples;s++)
+		{
+			float output=CURRENT_EMULATOR_FOR_AUDIO->getNextAudioSample();
+			
+			*out=output;
+			out++;
+			*out=output;
+			out++;
+		}
+	}
+}
+
 int main(int argc,char*argv[])
 {
 	try
@@ -449,6 +500,8 @@ int main(int argc,char*argv[])
 		
 		Emulator emulator;
 		emulator.loadProgramFromFile(args[0]);
+		
+		window.openAudio(audioCallbackFunction,256);
 		
 		emulator.start();
 		

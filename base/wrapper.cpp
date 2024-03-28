@@ -442,7 +442,7 @@ class Window
 		
 		SDL_AudioSpec want,have;
 		SDL_memset(&want,0,sizeof(want));
-		want.freq=44100;
+		want.freq=AUDIO_SAMPLE_RATE;
 		want.format=AUDIO_F32SYS;
 		want.channels=2;
 		want.samples=samples;
@@ -494,7 +494,7 @@ class Window
 		
 		SDL_AudioSpec want,have;
 		SDL_memset(&want,0,sizeof(want));
-		want.freq=44100;
+		want.freq=AUDIO_SAMPLE_RATE;
 		want.format=AUDIO_F32SYS;
 		want.channels=1;
 		want.samples=samples;

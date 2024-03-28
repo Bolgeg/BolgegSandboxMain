@@ -1,4 +1,4 @@
-#define AUDIO_SAMPLE_RATE 44100
+#define AUDIO_SAMPLE_RATE 48000
 
 typedef struct __attribute__((packed))
 {
