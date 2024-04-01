@@ -378,7 +378,11 @@ class Emulator
 						else
 						{
 							if(opcode&0x02) valueA*=valueB;
-							else valueA>>=valueB;
+							else
+							{
+								if(valueB<32) valueA>>=valueB;
+								else valueA=0;
+							}
 						}
 					}
 					else
@@ -494,7 +498,7 @@ int main(int argc,char*argv[])
 	else
 	{
 		Window window;
-		window.create();
+		window.create("BolgegSandbox emulator");
 		Image windowIcon("application/icon.bmp");
 		window.setWindowIcon(windowIcon);
 		
